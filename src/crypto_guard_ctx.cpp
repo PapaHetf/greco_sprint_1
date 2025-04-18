@@ -5,6 +5,7 @@
 #include <iostream>
 #include <memory>
 #include <print>
+#include <stdexcept>
 #include <string>
 
 namespace CryptoGuard {
@@ -31,9 +32,8 @@ public:
 
     void SendCryptoGuardException() {
         char buf[256];
-        auto error_code = ERR_peek_last_error();
-        ERR_error_string_n(error_code, buf, 255);
-        throw ExceptionCryptoGuard({buf}, error_code);
+        ERR_error_string_n(ERR_peek_last_error(), buf, 255);
+        throw std::runtime_error(buf);
     }
 
     AesCipherParams CreateChiperParamsFromPassword(std::string_view password) {
@@ -54,7 +54,7 @@ public:
     void CipherFile(std::iostream &inStream, std::iostream &outStream, std::string_view password,
                     size_t param_encrypt) {
         if (inStream.fail() || inStream.eof()) {
-            throw ExceptionCryptoGuard("Input file is not good!");
+            throw std::runtime_error("Input file is not good!");
         }
 
         std::stringstream ss;
@@ -81,7 +81,7 @@ public:
         std::string output;
 
         if (outStream.fail()) {
-            throw ExceptionCryptoGuard("Output file is not good!");
+            throw std::runtime_error("Output file is not good!");
         }
 
         EVP_CipherUpdate(ctx.get(), outBuf.data(), &outLen, (unsigned char *)in_stream.data(), in_stream.size());
@@ -104,7 +104,7 @@ public:
         unsigned int md_len;
 
         if (inStream.fail()) {
-            throw ExceptionCryptoGuard("Input file is not good!");
+            throw std::runtime_error("Input file is not good!");
         }
 
         std::stringstream ss;
@@ -151,7 +151,7 @@ CryptoGuardCtx &CryptoGuardCtx::operator=(CryptoGuardCtx &&) noexcept = default;
 
 void CryptoGuardCtx::EncryptFile(std::iostream &inStream, std::iostream &outStream, std::string_view password) {
     if (!inStream.good() || !outStream.good()) {
-        throw ExceptionCryptoGuard("I/O stream is not good");
+        throw std::runtime_error("I/O stream is not good");
     }
 
     pImpl_->CipherFile(inStream, outStream, password, 1);
@@ -159,7 +159,7 @@ void CryptoGuardCtx::EncryptFile(std::iostream &inStream, std::iostream &outStre
 
 void CryptoGuardCtx::DecryptFile(std::iostream &inStream, std::iostream &outStream, std::string_view password) {
     if (!inStream.good() || !outStream.good()) {
-        throw ExceptionCryptoGuard("I/O stream is not good");
+        throw std::runtime_error("I/O stream is not good");
     }
 
     pImpl_->CipherFile(inStream, outStream, password, 0);
@@ -167,7 +167,7 @@ void CryptoGuardCtx::DecryptFile(std::iostream &inStream, std::iostream &outStre
 
 std::string CryptoGuardCtx::CalculateChecksum(std::iostream &inStream) {
     if (!inStream.good()) {
-        throw ExceptionCryptoGuard("Input stream is not good");
+        throw std::runtime_error("Input stream is not good");
     }
 
     return pImpl_->CalculateChecksum(inStream);

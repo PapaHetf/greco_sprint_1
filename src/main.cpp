@@ -75,8 +75,8 @@ int main(int argc, char *argv[]) {
         default:
             throw std::runtime_error{"Unsupported command"};
         }
-    } catch (const CryptoGuard::ExceptionCryptoGuard &e) {
-        std::print(std::cerr, "Error code: {}\nErr message: {}\n", e.GetErrCode(), e.what());
+    } catch (const std::runtime_error &e) {
+        std::print(std::cerr, "Error: {}\n", e.what());
         return 1;
     } catch (const std::exception &e) {
         std::print(std::cerr, "Error: {}\n", e.what());

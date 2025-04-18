@@ -35,7 +35,9 @@ bool ProgramOptions::Parse(int argc, char *argv[]) {
         std::cout << desc_ << std::endl;
         return false;
     }
-
+    if (vm.empty()) {
+        return false;
+    }
     for (const auto &[cmd, val] : vm) {
         try {
             if (!ParseArg(cmd, val)) {

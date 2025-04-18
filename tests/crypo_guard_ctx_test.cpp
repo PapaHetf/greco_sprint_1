@@ -1,7 +1,9 @@
 #include "crypto_guard_ctx.h"
 #include <cstddef>
+#include <exception>
 #include <gtest/gtest.h>
 #include <ios>
+#include <stdexcept>
 #include <sys/types.h>
 
 TEST(Chiper, TestEncryptNoGood) {
@@ -11,7 +13,7 @@ TEST(Chiper, TestEncryptNoGood) {
     std::stringstream out_stream;
 
     in_stream.setstate(std::ios_base::failbit);
-    ASSERT_THROW(ctx.EncryptFile(in_stream, out_stream, "12345"), CryptoGuard::ExceptionCryptoGuard);
+    ASSERT_THROW(ctx.EncryptFile(in_stream, out_stream, "12345"), std::runtime_error);
 }
 
 TEST(Chiper, TestEncryptEof) {
@@ -21,7 +23,7 @@ TEST(Chiper, TestEncryptEof) {
     std::stringstream out_stream;
 
     in_stream.setstate(std::ios_base::eofbit);
-    ASSERT_THROW(ctx.EncryptFile(in_stream, out_stream, "12345"), CryptoGuard::ExceptionCryptoGuard);
+    ASSERT_THROW(ctx.EncryptFile(in_stream, out_stream, "12345"), std::runtime_error);
 }
 
 TEST(Chiper, TestEncryptNoThrow) {
@@ -40,7 +42,7 @@ TEST(Chiper, TestDecryptNoGood) {
     std::stringstream out_stream;
 
     in_stream.setstate(std::ios_base::failbit);
-    ASSERT_THROW(ctx.DecryptFile(in_stream, out_stream, "12345"), CryptoGuard::ExceptionCryptoGuard);
+    ASSERT_THROW(ctx.DecryptFile(in_stream, out_stream, "12345"), std::runtime_error);
 }
 
 TEST(Chiper, TestDecryptEof) {
@@ -50,7 +52,7 @@ TEST(Chiper, TestDecryptEof) {
     std::stringstream out_stream;
 
     in_stream.setstate(std::ios_base::eofbit);
-    ASSERT_THROW(ctx.DecryptFile(in_stream, out_stream, "12345"), CryptoGuard::ExceptionCryptoGuard);
+    ASSERT_THROW(ctx.DecryptFile(in_stream, out_stream, "12345"), std::runtime_error);
 }
 
 TEST(Chiper, TestDecryptNoThrow) {
@@ -87,7 +89,7 @@ TEST(Chiper, TestCheckSum1) {
 
     in_stream.setstate(std::ios_base::badbit);
 
-    ASSERT_THROW(ctx.CalculateChecksum(in_stream), CryptoGuard::ExceptionCryptoGuard);
+    ASSERT_THROW(ctx.CalculateChecksum(in_stream), std::runtime_error);
 }
 
 TEST(Chiper, TestCheckSum2) {

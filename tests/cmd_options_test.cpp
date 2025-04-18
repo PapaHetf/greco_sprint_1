@@ -181,3 +181,25 @@ TEST(ProgramOptions, TestPassword) {
     }
     delete[] argv;
 }
+
+TEST(ProgramOptions, TestEmptyCommand) {
+    int argc = 2;
+    char **argv = new char *[argc + 1];
+
+    std::string strings[] = {"ProgramName", ""};
+    for (int i = 0; i < argc; ++i) {
+        argv[i] = new char[strings[i].size() + 1];
+        std::strcpy(argv[i], strings[i].c_str());
+    }
+
+    argv[argc] = nullptr;
+
+    CryptoGuard::ProgramOptions po;
+
+    ASSERT_FALSE(po.Parse(argc, argv));
+
+    for (int i = 0; i < argc; ++i) {
+        delete[] argv[i];
+    }
+    delete[] argv;
+}

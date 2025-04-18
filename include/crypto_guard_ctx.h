@@ -12,19 +12,6 @@
 
 namespace CryptoGuard {
 
-class ExceptionCryptoGuard : public std::runtime_error {
-public:
-    ExceptionCryptoGuard(const std::string &value) : runtime_error(value), error_code_(0) {}
-
-    ExceptionCryptoGuard(const std::string &value, unsigned long error_code)
-        : runtime_error(value), error_code_(error_code) {}
-
-    unsigned long GetErrCode() const { return error_code_; }
-
-private:
-    unsigned long error_code_;
-};
-
 class CryptoGuardCtx {
 public:
     CryptoGuardCtx();
