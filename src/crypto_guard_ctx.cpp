@@ -1,4 +1,176 @@
+#include "crypto_guard_ctx.h"
+#include <cstddef>
+#include <cstdint>
+#include <iomanip>
+#include <iostream>
+#include <memory>
+#include <print>
+#include <string>
 
 namespace CryptoGuard {
+
+struct AesCipherParams {
+    static const size_t KEY_SIZE = 32;             // AES-256 key size
+    static const size_t IV_SIZE = 16;              // AES block size (IV length)
+    const EVP_CIPHER *cipher = EVP_aes_256_cbc();  // Cipher algorithm
+
+    int encrypt;                              // 1 for encryption, 0 for decryption
+    std::array<unsigned char, KEY_SIZE> key;  // Encryption key
+    std::array<unsigned char, IV_SIZE> iv;    // Initialization vector
+};
+
+class CryptoGuardCtx::Impl {
+public:
+    using p_evp_cipher_ctx =
+        std::unique_ptr<EVP_CIPHER_CTX, decltype([](EVP_CIPHER_CTX *ctx) { EVP_CIPHER_CTX_free(ctx); })>;
+    using p_evp_md_ctx = std::unique_ptr<EVP_MD_CTX, decltype([](EVP_MD_CTX *mdctx) { EVP_MD_CTX_free(mdctx); })>;
+    // EVP_MD_CTX_new
+    Impl() {}
+
+    ~Impl() {}
+
+    void SendCryptoGuardException() {
+        char buf[256];
+        auto error_code = ERR_peek_last_error();
+        ERR_error_string_n(error_code, buf, 255);
+        throw ExceptionCryptoGuard({buf}, error_code);
+    }
+
+    AesCipherParams CreateChiperParamsFromPassword(std::string_view password) {
+        AesCipherParams params;
+        constexpr std::array<unsigned char, 8> salt = {'1', '2', '3', '4', '5', '6', '7', '8'};
+
+        int result = EVP_BytesToKey(params.cipher, EVP_sha256(), salt.data(),
+                                    reinterpret_cast<const unsigned char *>(password.data()), password.size(), 1,
+                                    params.key.data(), params.iv.data());
+
+        if (result == 0) {
+            throw std::runtime_error{"Failed to create a key from password"};
+        }
+
+        return params;
+    }
+
+    void CipherFile(std::iostream &inStream, std::iostream &outStream, std::string_view password,
+                    size_t param_encrypt) {
+        if (inStream.fail() || inStream.eof()) {
+            throw ExceptionCryptoGuard("Input file is not good!");
+        }
+
+        std::stringstream ss;
+
+        ss << inStream.rdbuf();
+        const std::string in_stream = ss.str();
+
+        OpenSSL_add_all_algorithms();
+
+        auto params = CreateChiperParamsFromPassword(password);
+        params.encrypt = param_encrypt;
+
+        p_evp_cipher_ctx ctx(EVP_CIPHER_CTX_new());
+
+        if (ctx.get() == nullptr) {
+            SendCryptoGuardException();
+        }
+        // Инициализируем cipher
+        EVP_CipherInit_ex(ctx.get(), params.cipher, nullptr, params.key.data(), params.iv.data(), params.encrypt);
+
+        std::vector<unsigned char> outBuf(in_stream.size() + EVP_MAX_BLOCK_LENGTH);
+        int outLen;
+
+        std::string output;
+
+        if (outStream.fail()) {
+            throw ExceptionCryptoGuard("Output file is not good!");
+        }
+
+        EVP_CipherUpdate(ctx.get(), outBuf.data(), &outLen, (unsigned char *)in_stream.data(), in_stream.size());
+        for (int i = 0; i < outLen; ++i) {
+            output.push_back(outBuf[i]);
+        }
+
+        // Заканчиваем работу с cipher
+        EVP_CipherFinal_ex(ctx.get(), outBuf.data(), &outLen);
+        for (int i = 0; i < outLen; ++i) {
+            output.push_back(outBuf[i]);
+        }
+
+        outStream << output;
+        EVP_cleanup();
+    }
+
+    std::string CalculateChecksum(std::iostream &inStream) {
+        unsigned char md_value[EVP_MAX_MD_SIZE];
+        unsigned int md_len;
+
+        if (inStream.fail()) {
+            throw ExceptionCryptoGuard("Input file is not good!");
+        }
+
+        std::stringstream ss;
+        ss << inStream.rdbuf();
+
+        const EVP_MD *md = EVP_get_digestbyname("sha256");
+        if (md == nullptr) {
+            SendCryptoGuardException();
+        }
+
+        p_evp_md_ctx mdctx(EVP_MD_CTX_new());
+
+        if (mdctx == nullptr) {
+            SendCryptoGuardException();
+        }
+
+        if (!EVP_DigestInit_ex2(mdctx.get(), md, NULL)) {
+            SendCryptoGuardException();
+        }
+        if (!EVP_DigestUpdate(mdctx.get(), ss.str().c_str(), ss.str().length())) {
+            SendCryptoGuardException();
+        }
+
+        if (!EVP_DigestFinal_ex(mdctx.get(), md_value, &md_len)) {
+            SendCryptoGuardException();
+        }
+
+        std::stringstream crc;
+
+        for (size_t i = 0; i < md_len; ++i) {
+            crc << std::hex << std::setw(2) << std::setfill('0') << static_cast<uint16_t>(md_value[i]);
+        }
+
+        return crc.str();
+    }
+};
+
+CryptoGuardCtx::CryptoGuardCtx() {}
+
+CryptoGuardCtx::~CryptoGuardCtx() {}
+
+CryptoGuardCtx::CryptoGuardCtx(CryptoGuardCtx &&) noexcept = default;
+CryptoGuardCtx &CryptoGuardCtx::operator=(CryptoGuardCtx &&) noexcept = default;
+
+void CryptoGuardCtx::EncryptFile(std::iostream &inStream, std::iostream &outStream, std::string_view password) {
+    if (!inStream.good() || !outStream.good()) {
+        throw ExceptionCryptoGuard("I/O stream is not good");
+    }
+
+    pImpl_->CipherFile(inStream, outStream, password, 1);
+}
+
+void CryptoGuardCtx::DecryptFile(std::iostream &inStream, std::iostream &outStream, std::string_view password) {
+    if (!inStream.good() || !outStream.good()) {
+        throw ExceptionCryptoGuard("I/O stream is not good");
+    }
+
+    pImpl_->CipherFile(inStream, outStream, password, 0);
+}
+
+std::string CryptoGuardCtx::CalculateChecksum(std::iostream &inStream) {
+    if (!inStream.good()) {
+        throw ExceptionCryptoGuard("Input stream is not good");
+    }
+
+    return pImpl_->CalculateChecksum(inStream);
+}
 
 }  // namespace CryptoGuard

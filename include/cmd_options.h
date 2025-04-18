@@ -1,11 +1,13 @@
 #pragma once
 
+#include <array>
 #include <boost/program_options.hpp>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 namespace CryptoGuard {
-
+namespace bpo = boost::program_options;
 class ProgramOptions {
 public:
     ProgramOptions();
@@ -37,6 +39,10 @@ private:
     std::string password_;
 
     boost::program_options::options_description desc_;
+
+    const std::array<std::string, 4> list_argv_ = {"command", "input", "output", "password"};
+
+    bool ParseArg(const std::string &arg, const bpo::variable_value &vm);
 };
 
 }  // namespace CryptoGuard

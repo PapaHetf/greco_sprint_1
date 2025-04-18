@@ -1,0 +1,7 @@
+{
+  "[cpp]": {
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "clang-format.executable": "/usr/bin/clang-format"
+  }
+}
