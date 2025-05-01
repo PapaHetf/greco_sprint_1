@@ -11,12 +11,23 @@
             "program": "${workspaceFolder}/build/CryptoGuard",
             "args": [
                 "-i",
-                "input.txt",
+                "big_file.txt",
+                "-o",
+                "lana_encrypt.txt",
+                "-p",
+                "1155",
                 "--command",
-                "checksum"
+                "encrypt"
             ],
             "cwd": "${workspaceFolder}/build"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Test",
+            "program": "${workspaceFolder}/build/CryptoGuard_tests",
+            "args": [],
+            "cwd": "${workspaceFolder}/build"
         }
-
     ]
 }
