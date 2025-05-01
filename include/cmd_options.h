@@ -1,7 +1,7 @@
 #pragma once
 
-#include <array>
 #include <boost/program_options.hpp>
+#include <iostream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -40,9 +40,9 @@ private:
 
     boost::program_options::options_description desc_;
 
-    const std::array<std::string, 4> list_argv_ = {"command", "input", "output", "password"};
-
     bool ParseArg(const std::string &arg, const bpo::variable_value &vm);
+
+    bool CheckCmdDependence(const bpo::variables_map &vm);
 };
 
 }  // namespace CryptoGuard

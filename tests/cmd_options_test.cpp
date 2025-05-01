@@ -3,82 +3,50 @@
 
 using namespace std::string_literals;
 
-TEST(ProgramOptions, TestHelpOption) {
+TEST(ProgramOptions, TestCommandHelp) {
     int argc = 2;
-    char **argv = new char *[argc + 1];
-
-    std::string strings[] = {"ProgramName", "--help"};
-    for (int i = 0; i < argc; ++i) {
-        argv[i] = new char[strings[i].size() + 1];
-        std::strcpy(argv[i], strings[i].c_str());
-    }
-
-    argv[argc] = nullptr;
+    char arg0[] = "ProgramName";
+    char arg1[] = "--help";
+    char *argv[] = {arg0, arg1};
 
     CryptoGuard::ProgramOptions po;
-
     ASSERT_FALSE(po.Parse(argc, argv));
-
-    delete[] argv[1];
-    std::string help("--helpw");
-    argv[1] = new char[help.size() + 1];
-    argv[1] = std::strcpy(argv[1], help.c_str());
-
-    ASSERT_FALSE(po.Parse(argc, argv));
-
-    for (int i = 0; i < argc; ++i) {
-        delete[] argv[i];
-    }
-    delete[] argv;
 }
 
-TEST(ProgramOptions, TestСommand) {
+TEST(ProgramOptions, TestInvalidCommandHelp) {
+    int argc = 2;
+    char arg0[] = "ProgramName";
+    char arg1[] = "--helpw";
+    char *argv[] = {arg0, arg1};
+
+    CryptoGuard::ProgramOptions po;
+    ASSERT_FALSE(po.Parse(argc, argv));
+}
+
+TEST(ProgramOptions, TestNotFullOptionСommand) {
     int argc = 3;
-    char **argv = new char *[argc + 1];
-
-    std::string strings[] = {"ProgramName", "--command", "encrypt"};
-    for (int i = 0; i < argc; ++i) {
-        argv[i] = new char[strings[i].size() + 1];
-        std::strcpy(argv[i], strings[i].c_str());
-    }
-
-    argv[argc] = nullptr;
+    char arg0[] = "ProgramName";
+    char arg1[] = "--command";
+    char arg2[] = "encrypt";
+    char *argv[] = {arg0, arg1, arg2};
 
     CryptoGuard::ProgramOptions po;
 
-    ASSERT_TRUE(po.Parse(argc, argv));
-
-    delete[] argv[2];
-    std::string cmd("enrypt");
-    argv[2] = new char[cmd.size() + 1];
-    argv[2] = std::strcpy(argv[2], cmd.c_str());
-
     ASSERT_FALSE(po.Parse(argc, argv));
-
-    delete[] argv[1];
-    std::string option("--cmmand");
-    argv[1] = new char[option.size() + 1];
-    argv[1] = std::strcpy(argv[1], option.c_str());
-
-    ASSERT_FALSE(po.Parse(argc, argv));
-
-    for (int i = 0; i < argc; ++i) {
-        delete[] argv[i];
-    }
-    delete[] argv;
 }
 
 TEST(ProgramOptions, TestInputOption) {
-    int argc = 3;
-    char **argv = new char *[argc + 1];
-
-    std::string strings[] = {"ProgramName", "--input", "input.txt"};
-    for (int i = 0; i < argc; ++i) {
-        argv[i] = new char[strings[i].size() + 1];
-        std::strcpy(argv[i], strings[i].c_str());
-    }
-
-    argv[argc] = nullptr;
+    int argc = 9;
+    char arg0[] = "ProgramName";
+    char arg1[] = "--input";
+    char arg2[] = "input.txt";
+    char arg3[] = "-o";
+    char arg4[] = "output.txt";
+    char arg5[] = "-p";
+    char arg6[] = "123";
+    char arg7[] = "--command";
+    char arg8[] = "encrypt";
+    char *argv[] = {arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8};
 
     CryptoGuard::ProgramOptions po;
 
@@ -86,40 +54,44 @@ TEST(ProgramOptions, TestInputOption) {
 
     EXPECT_STREQ(po.GetInputFile().c_str(), "input.txt");
 
-    delete[] argv[1];
-    std::string option("-i");
-    argv[1] = new char[option.size() + 1];
-    argv[1] = std::strcpy(argv[1], option.c_str());
+    char arg1_new[] = "-i";
+    argv[1] = arg1_new;
 
     ASSERT_TRUE(po.Parse(argc, argv));
 
     EXPECT_STREQ(po.GetInputFile().c_str(), "input.txt");
+}
 
-    delete[] argv[1];
-    option.clear();
-    option.append("--inpt");
-    argv[1] = new char[option.size() + 1];
-    argv[1] = std::strcpy(argv[1], option.c_str());
+TEST(ProgramOptions, TestIncorrectInputOption) {
+    int argc = 9;
+    char arg0[] = "ProgramName";
+    char arg1[] = "--inpt";
+    char arg2[] = "input.txt";
+    char arg3[] = "-o";
+    char arg4[] = "output.txt";
+    char arg5[] = "-p";
+    char arg6[] = "123";
+    char arg7[] = "--command";
+    char arg8[] = "encrypt";
+    char *argv[] = {arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8};
+
+    CryptoGuard::ProgramOptions po;
 
     ASSERT_FALSE(po.Parse(argc, argv));
-
-    for (int i = 0; i < argc; ++i) {
-        delete[] argv[i];
-    }
-    delete[] argv;
 }
 
 TEST(ProgramOptions, TestOutputOption) {
-    int argc = 3;
-    char **argv = new char *[argc + 1];
-
-    std::string strings[] = {"ProgramName", "--output", "output.txt"};
-    for (int i = 0; i < argc; ++i) {
-        argv[i] = new char[strings[i].size() + 1];
-        std::strcpy(argv[i], strings[i].c_str());
-    }
-
-    argv[argc] = nullptr;
+    int argc = 9;
+    char arg0[] = "ProgramName";
+    char arg1[] = "--input";
+    char arg2[] = "input.txt";
+    char arg3[] = "-o";
+    char arg4[] = "output.txt";
+    char arg5[] = "-p";
+    char arg6[] = "123";
+    char arg7[] = "--command";
+    char arg8[] = "encrypt";
+    char *argv[] = {arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8};
 
     CryptoGuard::ProgramOptions po;
 
@@ -127,79 +99,133 @@ TEST(ProgramOptions, TestOutputOption) {
 
     EXPECT_STREQ(po.GetOutputFile().c_str(), "output.txt");
 
-    delete[] argv[1];
-    std::string option("-o");
-    argv[1] = new char[option.size() + 1];
-    argv[1] = std::strcpy(argv[1], option.c_str());
+    char arg3_new[] = "-o";
+    argv[3] = arg3_new;
 
     ASSERT_TRUE(po.Parse(argc, argv));
 
     EXPECT_STREQ(po.GetOutputFile().c_str(), "output.txt");
-
-    delete[] argv[1];
-    option.clear();
-    option.append("--outpt");
-    argv[1] = new char[option.size() + 1];
-    argv[1] = std::strcpy(argv[1], option.c_str());
-
-    ASSERT_FALSE(po.Parse(argc, argv));
-
-    for (int i = 0; i < argc; ++i) {
-        delete[] argv[i];
-    }
-    delete[] argv;
 }
 
-TEST(ProgramOptions, TestPassword) {
-    int argc = 3;
-    char **argv = new char *[argc + 1];
+TEST(ProgramOptions, TestIncorrectOutputOption) {
+    int argc = 9;
+    char arg0[] = "ProgramName";
+    char arg1[] = "--input";
+    char arg2[] = "input.txt";
+    char arg3[] = "--outpt";
+    char arg4[] = "output.txt";
+    char arg5[] = "-p";
+    char arg6[] = "123";
+    char arg7[] = "--command";
+    char arg8[] = "encrypt";
+    char *argv[] = {arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8};
 
-    std::string strings[] = {"ProgramName", "--password", "12345"};
-    for (int i = 0; i < argc; ++i) {
-        argv[i] = new char[strings[i].size() + 1];
-        std::strcpy(argv[i], strings[i].c_str());
-    }
+    CryptoGuard::ProgramOptions po;
 
-    argv[argc] = nullptr;
+    ASSERT_FALSE(po.Parse(argc, argv));
+}
+
+TEST(ProgramOptions, TestPasswordOption) {
+    int argc = 9;
+    char arg0[] = "ProgramName";
+    char arg1[] = "--input";
+    char arg2[] = "input.txt";
+    char arg3[] = "-o";
+    char arg4[] = "output.txt";
+    char arg5[] = "--password";
+    char arg6[] = "12345";
+    char arg7[] = "--command";
+    char arg8[] = "encrypt";
+    char *argv[] = {arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8};
 
     CryptoGuard::ProgramOptions po;
 
     ASSERT_TRUE(po.Parse(argc, argv));
     EXPECT_STREQ(po.GetPassword().c_str(), "12345");
 
-    delete[] argv[1];
-    std::string option("-p");
-    argv[1] = new char[option.size() + 1];
-    argv[1] = std::strcpy(argv[1], option.c_str());
+    char arg5_new[] = "-p";
+    argv[5] = arg5_new;
 
     ASSERT_TRUE(po.Parse(argc, argv));
-
     EXPECT_STREQ(po.GetPassword().c_str(), "12345");
+}
 
-    for (int i = 0; i < argc; ++i) {
-        delete[] argv[i];
-    }
-    delete[] argv;
+TEST(ProgramOptions, TestIncorrectPasswordOption) {
+    int argc = 9;
+    char arg0[] = "ProgramName";
+    char arg1[] = "--input";
+    char arg2[] = "input.txt";
+    char arg3[] = "-o";
+    char arg4[] = "output.txt";
+    char arg5[] = "-aswrd";
+    char arg6[] = "12345";
+    char arg7[] = "--command";
+    char arg8[] = "encrypt";
+    char *argv[] = {arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8};
+
+    CryptoGuard::ProgramOptions po;
+
+    ASSERT_FALSE(po.Parse(argc, argv));
 }
 
 TEST(ProgramOptions, TestEmptyCommand) {
     int argc = 2;
-    char **argv = new char *[argc + 1];
-
-    std::string strings[] = {"ProgramName", ""};
-    for (int i = 0; i < argc; ++i) {
-        argv[i] = new char[strings[i].size() + 1];
-        std::strcpy(argv[i], strings[i].c_str());
-    }
-
-    argv[argc] = nullptr;
+    char arg0[] = "ProgramName";
+    char arg1[] = "";
+    char *argv[] = {arg0, arg1};
 
     CryptoGuard::ProgramOptions po;
 
     ASSERT_FALSE(po.Parse(argc, argv));
+}
 
-    for (int i = 0; i < argc; ++i) {
-        delete[] argv[i];
-    }
-    delete[] argv;
+TEST(ProgramOptions, TestIncompleteCommandArgument) {
+    int argc = 8;
+    char arg0[] = "ProgramName";
+    char arg1[] = "--input";
+    char arg3[] = "-o";
+    char arg4[] = "output.txt";
+    char arg5[] = "--password";
+    char arg6[] = "12345";
+    char arg7[] = "--command";
+    char arg8[] = "encrypt";
+    char *argv[] = {arg0, arg1, arg3, arg4, arg5, arg6, arg7, arg8};
+
+    CryptoGuard::ProgramOptions po;
+
+    ASSERT_FALSE(po.Parse(argc, argv));
+}
+
+TEST(ProgramOptions, TestIncompleteCommand1) {
+    int argc = 8;
+    char arg0[] = "ProgramName";
+    char arg2[] = "input.txt";
+    char arg3[] = "-o";
+    char arg4[] = "output.txt";
+    char arg5[] = "--password";
+    char arg6[] = "12345";
+    char arg7[] = "--command";
+    char arg8[] = "encrypt";
+    char *argv[] = {arg0, arg2, arg3, arg4, arg5, arg6, arg7, arg8};
+
+    CryptoGuard::ProgramOptions po;
+
+    ASSERT_FALSE(po.Parse(argc, argv));
+}
+
+TEST(ProgramOptions, TestIncompleteCommand2) {
+    int argc = 8;
+    char arg0[] = "ProgramName";
+    char arg1[] = "--input";
+    char arg2[] = "input.txt";
+    char arg3[] = "-o";
+    char arg4[] = "output.txt";
+    char arg5[] = "-paswrd";
+    char arg6[] = "12345";
+    char arg8[] = "encrypt";
+    char *argv[] = {arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg8};
+
+    CryptoGuard::ProgramOptions po;
+
+    ASSERT_FALSE(po.Parse(argc, argv));
 }

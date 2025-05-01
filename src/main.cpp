@@ -7,33 +7,18 @@
 #include <stdexcept>
 #include <string>
 
-void FuncEncryptDecrypt(CryptoGuard::ProgramOptions &options, CryptoGuard::CryptoGuardCtx &cryptoCtx) {
-    std::ifstream input_file(options.GetInputFile(), std::ios::in);
+std::pair<std::fstream, std::fstream> OpenInOutFiles(std::string_view in, std::string_view out) {
+
+    std::fstream input_file(in.data(), std::ios::in);
     if (!input_file.is_open()) {
         throw std::runtime_error{"Can't open input file"};
     }
 
-    std::ofstream out_file(options.GetOutputFile());
+    std::fstream out_file(out.data(), std::ios::out);
     if (!out_file.is_open()) {
         throw std::runtime_error{"Can't open output file"};
     }
-
-    std::stringstream in_stream;
-    in_stream << input_file.rdbuf();
-
-    std::stringstream out_stream;
-
-    using COMMAND_TYPE = CryptoGuard::ProgramOptions::COMMAND_TYPE;
-    if (options.GetCommand() == COMMAND_TYPE::ENCRYPT) {
-        cryptoCtx.EncryptFile(in_stream, out_stream, options.GetPassword());
-    } else if (options.GetCommand() == COMMAND_TYPE::DECRYPT) {
-        cryptoCtx.DecryptFile(in_stream, out_stream, options.GetPassword());
-    }
-
-    out_file << out_stream.rdbuf();
-
-    input_file.close();
-    out_file.close();
+    return {std::move(input_file), std::move(out_file)};
 }
 
 int main(int argc, char *argv[]) {
@@ -49,35 +34,31 @@ int main(int argc, char *argv[]) {
         using COMMAND_TYPE = CryptoGuard::ProgramOptions::COMMAND_TYPE;
         switch (options.GetCommand()) {
         case COMMAND_TYPE::ENCRYPT: {
-            FuncEncryptDecrypt(options, cryptoCtx);
+            auto [in, out] = OpenInOutFiles(options.GetInputFile(), options.GetOutputFile());
+            cryptoCtx.EncryptFile(in, out, options.GetPassword());
             std::print("File encoded successfully\n");
             break;
         }
         case COMMAND_TYPE::DECRYPT: {
-            FuncEncryptDecrypt(options, cryptoCtx);
+            auto [in, out] = OpenInOutFiles(options.GetInputFile(), options.GetOutputFile());
+            cryptoCtx.DecryptFile(in, out, options.GetPassword());
             std::print("File decoded successfully\n");
             break;
         }
         case COMMAND_TYPE::CHECKSUM: {
-            std::ifstream input_file(options.GetInputFile(), std::ios::in);
+            std::fstream input_file(options.GetInputFile(), std::ios::in);
             if (!input_file.is_open()) {
                 throw std::runtime_error{"Can't open input file"};
             }
 
-            std::stringstream in_stream;
-            in_stream << input_file.rdbuf();
-
-            std::string check_sum = cryptoCtx.CalculateChecksum(in_stream);
-            input_file.close();
+            std::string check_sum = cryptoCtx.CalculateChecksum(input_file);
+            // input_file.close();
             std::print("Checksum: {}\n", check_sum);
             break;
         }
         default:
             throw std::runtime_error{"Unsupported command"};
         }
-    } catch (const std::runtime_error &e) {
-        std::print(std::cerr, "Error: {}\n", e.what());
-        return 1;
     } catch (const std::exception &e) {
         std::print(std::cerr, "Error: {}\n", e.what());
         return 1;

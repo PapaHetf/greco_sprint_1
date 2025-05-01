@@ -1,12 +1,4 @@
 #include "crypto_guard_ctx.h"
-#include <cstddef>
-#include <cstdint>
-#include <iomanip>
-#include <iostream>
-#include <memory>
-#include <print>
-#include <stdexcept>
-#include <string>
 
 namespace CryptoGuard {
 
@@ -33,7 +25,7 @@ public:
     void SendCryptoGuardException() {
         char buf[256];
         ERR_error_string_n(ERR_peek_last_error(), buf, 255);
-        throw std::runtime_error(buf);
+        throw std::runtime_error{std::format("Internal error: {}", buf)};
     }
 
     AesCipherParams CreateChiperParamsFromPassword(std::string_view password) {
@@ -57,11 +49,6 @@ public:
             throw std::runtime_error("Input file is not good!");
         }
 
-        std::stringstream ss;
-
-        ss << inStream.rdbuf();
-        const std::string in_stream = ss.str();
-
         OpenSSL_add_all_algorithms();
 
         auto params = CreateChiperParamsFromPassword(password);
@@ -72,43 +59,50 @@ public:
         if (ctx.get() == nullptr) {
             SendCryptoGuardException();
         }
+
         // Инициализируем cipher
-        EVP_CipherInit_ex(ctx.get(), params.cipher, nullptr, params.key.data(), params.iv.data(), params.encrypt);
-
-        std::vector<unsigned char> outBuf(in_stream.size() + EVP_MAX_BLOCK_LENGTH);
-        int outLen;
-
-        std::string output;
+        if (!EVP_CipherInit_ex(ctx.get(), params.cipher, nullptr, params.key.data(), params.iv.data(),
+                               params.encrypt)) {
+            SendCryptoGuardException();
+        }
 
         if (outStream.fail()) {
             throw std::runtime_error("Output file is not good!");
         }
 
-        EVP_CipherUpdate(ctx.get(), outBuf.data(), &outLen, (unsigned char *)in_stream.data(), in_stream.size());
-        for (int i = 0; i < outLen; ++i) {
-            output.push_back(outBuf[i]);
+        char inbuf[1024];
+        unsigned char outbuf[1024 + EVP_MAX_BLOCK_LENGTH];
+
+        int outlen;
+        int inlen;
+
+        for (;;) {
+            inStream.read(inbuf, 1024);
+            inlen = inStream.gcount();
+            if (inlen <= 0) {
+                break;
+            }
+
+            if (!EVP_CipherUpdate(ctx.get(), outbuf, &outlen, (unsigned char *)inbuf, inlen)) {
+                SendCryptoGuardException();
+            }
+
+            outStream.write((char *)outbuf, outlen);
         }
 
         // Заканчиваем работу с cipher
-        EVP_CipherFinal_ex(ctx.get(), outBuf.data(), &outLen);
-        for (int i = 0; i < outLen; ++i) {
-            output.push_back(outBuf[i]);
+        if (!EVP_CipherFinal_ex(ctx.get(), outbuf, &outlen)) {
+            SendCryptoGuardException();
         }
 
-        outStream << output;
+        outStream.write((char *)outbuf, outlen);
         EVP_cleanup();
     }
 
     std::string CalculateChecksum(std::iostream &inStream) {
-        unsigned char md_value[EVP_MAX_MD_SIZE];
-        unsigned int md_len;
-
         if (inStream.fail()) {
             throw std::runtime_error("Input file is not good!");
         }
-
-        std::stringstream ss;
-        ss << inStream.rdbuf();
 
         const EVP_MD *md = EVP_get_digestbyname("sha256");
         if (md == nullptr) {
@@ -124,9 +118,24 @@ public:
         if (!EVP_DigestInit_ex2(mdctx.get(), md, NULL)) {
             SendCryptoGuardException();
         }
-        if (!EVP_DigestUpdate(mdctx.get(), ss.str().c_str(), ss.str().length())) {
-            SendCryptoGuardException();
+
+        char inbuf[1024];
+        int inlen = 0;
+
+        for (;;) {
+            inStream.read(inbuf, 1024);
+            inlen = inStream.gcount();
+            if (inlen <= 0) {
+                break;
+            }
+
+            if (!EVP_DigestUpdate(mdctx.get(), inbuf, inlen)) {
+                SendCryptoGuardException();
+            }
         }
+
+        unsigned char md_value[EVP_MAX_MD_SIZE];
+        unsigned int md_len;
 
         if (!EVP_DigestFinal_ex(mdctx.get(), md_value, &md_len)) {
             SendCryptoGuardException();
@@ -137,7 +146,6 @@ public:
         for (size_t i = 0; i < md_len; ++i) {
             crc << std::hex << std::setw(2) << std::setfill('0') << static_cast<uint16_t>(md_value[i]);
         }
-
         return crc.str();
     }
 };

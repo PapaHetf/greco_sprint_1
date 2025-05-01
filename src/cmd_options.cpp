@@ -1,12 +1,4 @@
 #include "cmd_options.h"
-#include <boost/container/container_fwd.hpp>
-#include <boost/program_options/errors.hpp>
-#include <boost/program_options/value_semantic.hpp>
-#include <boost/program_options/variables_map.hpp>
-#include <iostream>
-#include <print>
-#include <stdexcept>
-#include <string>
 
 namespace CryptoGuard {
 
@@ -29,32 +21,38 @@ bool ProgramOptions::Parse(int argc, char *argv[]) {
     } catch (bpo::unknown_option &err) {
         std::print(std::cerr, "{}\n", err.what());
         return false;
+    } catch (const bpo::invalid_command_line_syntax &err) {
+        std::print(std::cerr, "{}\n", err.what());
+        return false;
+    } catch (...) {
+        return false;
+    }
+
+    if (vm.empty()) {
+        return false;
     }
 
     if (vm.count("help")) {
         std::cout << desc_ << std::endl;
         return false;
     }
-    if (vm.empty()) {
+
+    if (!CheckCmdDependence(vm)) {
         return false;
     }
+
     for (const auto &[cmd, val] : vm) {
-        try {
-            if (!ParseArg(cmd, val)) {
-                return false;
-            }
-        } catch (const std::out_of_range &err) {
-            std::print(std::cerr, "{} {} Unsupport command\n", __FILE__, __LINE__);
+        if (!ParseArg(cmd, val)) {
             return false;
         }
     }
+
     return true;
 }
 
 bool ProgramOptions::ParseArg(const std::string &arg, const bpo::variable_value &vm) {
     if (arg == "command") {
-        auto command = vm.as<std::string>();
-        command_ = commandMapping_.at(command);
+        command_ = commandMapping_.at(vm.as<std::string>());
     } else if (arg == "input") {
         inputFile_ = vm.as<std::string>();
     } else if (arg == "output") {
@@ -66,6 +64,31 @@ bool ProgramOptions::ParseArg(const std::string &arg, const bpo::variable_value 
     }
 
     return true;
+}
+
+bool ProgramOptions::CheckCmdDependence(const bpo::variables_map &vm) {
+    if (!vm.count("command")) {
+        return false;
+    }
+
+    const auto command = vm["command"].as<std::string>();
+
+    if (commandMapping_.find(command) == commandMapping_.end()) {
+        std::print(std::cerr, "Unsupport command {}\n", command);
+        return false;
+    }
+
+    if (command == "decrypt" || command == "encrypt") {
+        if (vm.count("input") && vm.count("output") && vm.count("password")) {
+            return true;
+        }
+    } else if (command == "checksum") {
+        if (vm.count("input")) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 }  // namespace CryptoGuard

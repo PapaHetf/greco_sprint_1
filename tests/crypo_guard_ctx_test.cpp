@@ -1,6 +1,4 @@
 #include "crypto_guard_ctx.h"
-#include <cstddef>
-#include <exception>
 #include <gtest/gtest.h>
 #include <ios>
 #include <stdexcept>
@@ -67,19 +65,25 @@ TEST(Chiper, TestDecryptNoThrow) {
 TEST(Chiper, TestEncryptDecrypt) {
     CryptoGuard::CryptoGuardCtx ctx;
 
-    std::stringstream in_stream;
+    std::stringstream in_stream("Kiss me hard before you go\nSummertime sadness\0");
     std::stringstream out_stream;
     std::stringstream end_stream;
 
-    in_stream << "Kiss me hard before you go\nSummertime sadness\0";
     ctx.EncryptFile(in_stream, out_stream, "12345");
     ctx.DecryptFile(out_stream, end_stream, "12345");
 
     ASSERT_STREQ(in_stream.str().c_str(), end_stream.str().c_str());
+}
 
-    std::stringstream end_stream_two;
-    ctx.DecryptFile(out_stream, end_stream, "1234");
-    ASSERT_STRNE(in_stream.str().c_str(), end_stream_two.str().c_str());
+TEST(Chiper, TestEncryptDecryptFailKey) {
+    CryptoGuard::CryptoGuardCtx ctx;
+
+    std::stringstream in_stream("Kiss me hard before you go\nSummertime sadness\0");
+    std::stringstream out_stream;
+    std::stringstream end_stream;
+
+    ctx.EncryptFile(in_stream, out_stream, "12345");
+    ASSERT_THROW(ctx.DecryptFile(out_stream, end_stream, "1234"), std::runtime_error);
 }
 
 TEST(Chiper, TestCheckSum1) {
@@ -106,17 +110,15 @@ TEST(Chiper, TestCheckSum2) {
 TEST(Chiper, TestCheckSum3) {
     CryptoGuard::CryptoGuardCtx ctx;
 
-    std::stringstream in_stream;
+    std::stringstream in_stream("Kiss me hard before you go\nSummertime sadness\0");
     std::stringstream out_stream;
     std::stringstream end_stream;
 
-    in_stream << "Kiss me hard before you go\nSummertime sadness\0";
-
     std::string encrypt_summ = ctx.CalculateChecksum(in_stream);
 
-    in_stream << "Kiss me hard before you go\nSummertime sadness\0";
+    std::stringstream in_stream_new("Kiss me hard before you go\nSummertime sadness\0");
 
-    ctx.EncryptFile(in_stream, out_stream, "12345");
+    ctx.EncryptFile(in_stream_new, out_stream, "12345");
     ctx.DecryptFile(out_stream, end_stream, "12345");
 
     std::string decrypt_summ = ctx.CalculateChecksum(end_stream);
